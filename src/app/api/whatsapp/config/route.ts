@@ -150,8 +150,9 @@ export async function GET() {
     }
   } catch (error) {
     console.error('Error in WhatsApp config GET:', error)
+    const errMsg = error instanceof Error ? error.message : String(error)
     return NextResponse.json(
-      { connected: false, reason: 'unknown', message: 'Internal server error' },
+      { connected: false, reason: 'unknown', message: `Internal server error: ${errMsg}` },
       { status: 500 }
     )
   }
@@ -427,7 +428,8 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('Error in WhatsApp config POST:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const errMsg = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: `Internal server error: ${errMsg}` }, { status: 500 })
   }
 }
 
@@ -475,6 +477,7 @@ export async function DELETE() {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error in WhatsApp config DELETE:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const errMsg = error instanceof Error ? error.message : String(error)
+    return NextResponse.json({ error: `Internal server error: ${errMsg}` }, { status: 500 })
   }
 }

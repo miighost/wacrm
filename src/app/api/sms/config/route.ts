@@ -81,8 +81,9 @@ export async function GET() {
     );
   } catch (err) {
     console.error("[sms-config] GET failed:", err);
+    const errMsg = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { connected: false, reason: "server_error", message: "Server error checking configuration." },
+      { connected: false, reason: "server_error", message: `Server error checking configuration: ${errMsg}` },
       { status: 500 },
     );
   }
@@ -146,6 +147,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
     console.error("[sms-config] POST failed:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const errMsg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: `Internal server error: ${errMsg}` }, { status: 500 });
   }
 }

@@ -26,7 +26,7 @@ import crypto from 'crypto'
  *   `src/app/api/whatsapp/send/route.ts`.
  */
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY!
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY
 // 12 bytes is the NIST-recommended IV length for GCM — keeps the
 // counter block well below 2^32 and matches the default web-crypto
 // behaviour, so any future port is straightforward.
@@ -35,6 +35,9 @@ const CBC_IV_LENGTH = 16
 const AUTH_TAG_LENGTH = 16
 
 export function encrypt(text: string): string {
+  if (!ENCRYPTION_KEY) {
+    throw new Error('ENCRYPTION_KEY is missing. Please set ENCRYPTION_KEY in your environment variables.')
+  }
   const iv = crypto.randomBytes(GCM_IV_LENGTH)
   const cipher = crypto.createCipheriv(
     'aes-256-gcm',
@@ -48,6 +51,9 @@ export function encrypt(text: string): string {
 }
 
 export function decrypt(encryptedText: string): string {
+  if (!ENCRYPTION_KEY) {
+    throw new Error('ENCRYPTION_KEY is missing. Please set ENCRYPTION_KEY in your environment variables.')
+  }
   const parts = encryptedText.split(':')
 
   if (parts.length === 3) {
@@ -94,6 +100,7 @@ export function decrypt(encryptedText: string): string {
     decrypted += decipher.final('utf8')
     return decrypted
   }
+
 
   throw new Error(
     `Encrypted token has unrecognised format (expected 1 or 2 colons, got ${
