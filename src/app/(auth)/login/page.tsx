@@ -67,7 +67,7 @@ function LoginPageInner() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="items-center text-center">
           <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -156,6 +156,17 @@ function LoginPageInner() {
           </p>
         </CardContent>
       </Card>
+      <div className="text-center text-xs text-muted-foreground/60">
+        Powered by{" "}
+        <a
+          href="http://www.miigsolution.so"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Miig Solutions
+        </a>
+      </div>
     </div>
   );
 }

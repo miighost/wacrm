@@ -439,7 +439,7 @@ export function MessageThread({
   }, [messages]);
 
   const handleSend = useCallback(
-    async (text: string, replyToId?: string) => {
+    async (text: string, replyToId?: string, channel: 'whatsapp' | 'sms' = 'whatsapp') => {
       if (!conversation) return;
 
       const tempId = `temp-${Date.now()}`;
@@ -454,31 +454,57 @@ export function MessageThread({
         status: "sending",
         created_at: new Date().toISOString(),
         reply_to_message_id: replyToId,
+        channel_type: channel,
       };
       onNewMessage(optimisticMsg);
       setReplyTo(null);
 
       try {
-        const res = await fetch("/api/whatsapp/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversation_id: conversation.id,
-            message_type: "text",
-            content_text: text,
-            reply_to_message_id: replyToId,
-          }),
-        });
+        if (channel === 'sms') {
+          const res = await fetch("/api/sms/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recipients: [{
+                name: contact?.name || contact?.phone || "",
+                phone: contact?.phone || "",
+                contactId: contact?.id
+              }],
+              message: text,
+            }),
+          });
 
-        const payload = await res.json().catch(() => ({}));
+          const payload = await res.json().catch(() => ({}));
 
-        if (!res.ok) {
-          const reason = payload?.error || `HTTP ${res.status}`;
-          console.error("Failed to send message:", reason);
-          toast.error(`Failed to send: ${reason}`);
-          // Mark the optimistic bubble as failed so the user sees what happened
-          onUpdateMessage(tempId, { status: "failed" });
-          return;
+          if (!res.ok) {
+            const reason = payload?.error || `HTTP ${res.status}`;
+            console.error("Failed to send SMS:", reason);
+            toast.error(`Failed to send SMS: ${reason}`);
+            onUpdateMessage(tempId, { status: "failed" });
+            return;
+          }
+        } else {
+          const res = await fetch("/api/whatsapp/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversation_id: conversation.id,
+              message_type: "text",
+              content_text: text,
+              reply_to_message_id: replyToId,
+            }),
+          });
+
+          const payload = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            const reason = payload?.error || `HTTP ${res.status}`;
+            console.error("Failed to send message:", reason);
+            toast.error(`Failed to send: ${reason}`);
+            // Mark the optimistic bubble as failed so the user sees what happened
+            onUpdateMessage(tempId, { status: "failed" });
+            return;
+          }
         }
 
         // Success — the realtime INSERT event will replace the temp bubble
@@ -492,7 +518,7 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage]
+    [conversation, contact, onNewMessage, onUpdateMessage]
   );
 
   const handleSendMedia = useCallback(

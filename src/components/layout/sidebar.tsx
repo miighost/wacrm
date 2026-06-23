@@ -11,6 +11,7 @@ import {
   GitBranch,
   LayoutDashboard,
   LogOut,
+  Mail,
   MessageSquare,
   Radio,
   Settings,
@@ -90,6 +91,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inbox", label: "Inbox", icon: MessageSquare },
   { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/sms", label: "SMS Portal", icon: Mail },
   { href: "/pipelines", label: "Pipelines", icon: GitBranch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
   { href: "/automations", label: "Automations", icon: Zap },
@@ -183,7 +185,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               <MessageSquare className="h-4 w-4" />
             </div>
             <span className="text-sm font-semibold text-foreground">
-              CRM Template for WhatsApp
+              HalmarDir
             </span>
           </Link>
           <button
@@ -370,6 +372,17 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <div className="mt-3 text-center text-[10px] text-muted-foreground/60">
+            Powered by{" "}
+            <a
+              href="http://www.miigsolution.so"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Miig Solutions
+            </a>
+          </div>
         </div>
       </aside>
     </>

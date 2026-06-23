@@ -13,6 +13,8 @@ import {
   LayoutTemplate,
   ImageOff,
   CornerDownLeft,
+  Mail,
+  MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ReplyQuote } from "./reply-quote";
@@ -284,7 +286,7 @@ export function MessageBubble({
         >
           <span
             className={cn(
-              "text-[10px]",
+              "text-[10px] inline-flex items-center gap-1",
               // Outbound bubbles sit on the primary fill, so the
               // timestamp must read against that (not the neutral
               // foreground) — otherwise it goes low-contrast in light
@@ -292,6 +294,11 @@ export function MessageBubble({
               isAgent ? "text-primary-foreground/70" : "text-muted-foreground",
             )}
           >
+            {message.channel_type === "sms" ? (
+              <span title="SMS" className="inline-flex"><Mail className="h-2.5 w-2.5 shrink-0" /></span>
+            ) : (
+              <span title="WhatsApp" className="inline-flex"><MessageSquare className="h-2.5 w-2.5 shrink-0" /></span>
+            )}
             {time}
           </span>
           {isAgent && <StatusIcon status={message.status} />}

@@ -48,6 +48,10 @@ export function SettingsOverview({
   const [whatsapp, setWhatsapp] = useState<WhatsAppStatus | null>(null);
   const [whatsappLoading, setWhatsappLoading] = useState(true);
 
+  // SMS status is also tracked separately
+  const [sms, setSms] = useState<{ configured: boolean; active: boolean } | null>(null);
+  const [smsLoading, setSmsLoading] = useState(true);
+
   useEffect(() => {
     if (!user || !accountId) return;
     let cancelled = false;
@@ -132,6 +136,22 @@ export function SettingsOverview({
       setWhatsappLoading(false);
     })();
 
+    // SMS configuration status
+    (async () => {
+      setSmsLoading(true);
+      const { data, error } = await supabase
+        .from('sms_config')
+        .select('is_active')
+        .eq('account_id', acctId)
+        .maybeSingle();
+      if (cancelled) return;
+      setSms({
+        configured: !!data,
+        active: data?.is_active ?? false,
+      });
+      setSmsLoading(false);
+    })();
+
     return () => {
       cancelled = true;
     };
@@ -166,6 +186,21 @@ export function SettingsOverview({
       ) : (
         <>
           <StatusDot tone="muted" /> Needs reconnecting
+        </>
+      ),
+    },
+    {
+      section: 'sms',
+      loading: smsLoading,
+      subtitle: !sms?.configured ? (
+        'Not set up yet'
+      ) : sms.active ? (
+        <>
+          <StatusDot tone="ok" /> Active
+        </>
+      ) : (
+        <>
+          <StatusDot tone="muted" /> Disabled
         </>
       ),
     },

@@ -153,6 +153,7 @@ export interface Conversation {
   last_message_text?: string;
   last_message_at?: string;
   unread_count: number;
+  channel_type?: 'whatsapp' | 'sms';
   created_at: string;
   updated_at: string;
   contact?: Contact;
@@ -182,6 +183,7 @@ export interface Message {
   template_name?: string;
   message_id?: string;
   status: MessageStatus;
+  channel_type?: 'whatsapp' | 'sms';
   created_at: string;
   reply_to_message_id?: string;
   /**

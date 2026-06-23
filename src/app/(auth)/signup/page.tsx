@@ -91,7 +91,7 @@ function SignupPageInner() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
         <Card className="w-full max-w-md border-border bg-card">
           <CardHeader className="items-center text-center">
             <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -123,12 +123,23 @@ function SignupPageInner() {
             </Link>
           </CardContent>
         </Card>
+        <div className="text-center text-xs text-muted-foreground/60">
+          Powered by{" "}
+          <a
+            href="http://www.miigsolution.so"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Miig Solutions
+          </a>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
       <Card className="w-full max-w-md border-border bg-card">
         <CardHeader className="items-center text-center">
           <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -144,7 +155,7 @@ function SignupPageInner() {
           <CardDescription className="text-muted-foreground">
             {inviteToken
               ? "Verify your email, then accept the invitation to join your team."
-              : "Get started with CRM Template for WhatsApp"}
+              : "Get started with HalmarDir"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -239,6 +250,17 @@ function SignupPageInner() {
           </p>
         </CardContent>
       </Card>
+      <div className="text-center text-xs text-muted-foreground/60">
+        Powered by{" "}
+        <a
+          href="http://www.miigsolution.so"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Miig Solutions
+        </a>
+      </div>
     </div>
   );
 }

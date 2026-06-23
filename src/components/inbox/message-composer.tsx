@@ -18,6 +18,8 @@ import {
   Square,
   X,
   Loader2,
+  Mail,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GatedButton } from "@/components/ui/gated-button";
@@ -28,6 +30,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCan } from "@/hooks/use-can";
+import { useAuth } from "@/hooks/use-auth";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -93,7 +97,7 @@ interface MediaDraft {
 interface MessageComposerProps {
   conversationId: string;
   sessionExpired: boolean;
-  onSend: (text: string, replyToId?: string) => void;
+  onSend: (text: string, replyToId?: string, channel?: 'whatsapp' | 'sms') => void;
   onSendMedia: (payload: SendMediaPayload) => void;
   onOpenTemplates: () => void;
   replyTo?: ReplyDraft | null;
@@ -123,6 +127,47 @@ export function MessageComposer({
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const { accountId } = useAuth();
+  const supabase = createClient();
+  const [smsEnabled, setSmsEnabled] = useState(false);
+  const [channel, setChannel] = useState<"whatsapp" | "sms">("whatsapp");
+
+  // Professional GSM vs Unicode character & segment counter
+  const getSMSStats = (val: string) => {
+    if (!val) return { chars: 0, isUnicode: false, limit: 160, segments: 1 };
+    const gsmRegexp = /^[A-Za-z0-9\s@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ!"#¤%&'()*+,\-./:;<=>?¡¿ÄÖÑÜ§àäöñüò_^{}\[~\]|\\€]*$/;
+    const isUnicode = !gsmRegexp.test(val);
+    const gsmDoubleChars = /[\^{}\[~\]|\\€]/g;
+    let chars = val.length;
+    if (!isUnicode) {
+      const matches = val.match(gsmDoubleChars);
+      if (matches) chars += matches.length;
+    }
+    const limit = isUnicode ? 70 : 160;
+    const concatLimit = isUnicode ? 67 : 153;
+    const segments = chars > limit ? Math.ceil(chars / concatLimit) : 1;
+    return { chars, isUnicode, limit, segments };
+  };
+
+  const smsStats = getSMSStats(text);
+
+  useEffect(() => {
+    if (!accountId) return;
+    const checkSmsConfig = async () => {
+      try {
+        const { data } = await supabase
+          .from("sms_config")
+          .select("is_active")
+          .eq("account_id", accountId)
+          .maybeSingle();
+        setSmsEnabled(!!data?.is_active);
+      } catch (err) {
+        console.error("Error loading SMS status inside composer:", err);
+      }
+    };
+    void checkSmsConfig();
+  }, [accountId, supabase]);
 
   // Media attachment state. `draft` holds an uploaded-but-not-yet-sent
   // attachment; `busy` covers the upload/transcode window.
@@ -158,8 +203,8 @@ export function MessageComposer({
   // every capability — so the disabled branch is a no-op there.
   const canSend = useCan("send-messages");
   const readOnly = !canSend;
-  // Media (like free-form text) is only allowed inside the 24h window.
-  const inputsDisabled = readOnly || sessionExpired;
+  // Media (like free-form text) is only allowed inside the 24h window for WhatsApp.
+  const inputsDisabled = readOnly || (sessionExpired && channel === "whatsapp");
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -191,11 +236,11 @@ export function MessageComposer({
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
-    if (!trimmed || sending || sessionExpired) return;
+    if (!trimmed || sending || (sessionExpired && channel === "whatsapp")) return;
 
     setSending(true);
     try {
-      onSend(trimmed, replyTo?.id);
+      onSend(trimmed, replyTo?.id, channel);
       setText("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -203,7 +248,7 @@ export function MessageComposer({
     } finally {
       setSending(false);
     }
-  }, [text, sending, sessionExpired, onSend, replyTo?.id]);
+  }, [text, sending, sessionExpired, channel, onSend, replyTo?.id]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -379,6 +424,42 @@ export function MessageComposer({
 
   return (
     <div className="border-t border-border bg-card p-3">
+      {smsEnabled && (
+        <div className="flex items-center gap-1.5 mb-2.5 pb-2 border-b border-border/60">
+          <button
+            type="button"
+            onClick={() => {
+              setChannel("whatsapp");
+            }}
+            className={cn(
+              "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all duration-150 border border-transparent",
+              channel === "whatsapp"
+                ? "bg-primary/10 text-primary border-primary/20"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <MessageSquare className="size-3.5" />
+            WhatsApp
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setChannel("sms");
+              if (draft) discardDraft();
+            }}
+            className={cn(
+              "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all duration-150 border border-transparent",
+              channel === "sms"
+                ? "bg-primary/10 text-primary border-primary/20"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Mail className="size-3.5" />
+            SMS
+          </button>
+        </div>
+      )}
+
       {replyTo && (
         <div className="mb-2">
           <ReplyQuote
@@ -388,7 +469,7 @@ export function MessageComposer({
           />
         </div>
       )}
-      {sessionExpired && (
+      {sessionExpired && channel === "whatsapp" && (
         <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-500/10 px-3 py-2">
           <p className="text-xs text-amber-400">
             24-hour session expired. Use a template to re-engage.
@@ -475,13 +556,15 @@ export function MessageComposer({
           {/* Attach menu — photo / video / document / voice. */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              disabled={inputsDisabled || busy}
+              disabled={inputsDisabled || busy || channel === "sms"}
               title={
-                readOnly
-                  ? "Read-only — your role can't send messages"
-                  : inputsDisabled
-                    ? undefined
-                    : "Attach media"
+                channel === "sms"
+                  ? "SMS does not support attachments"
+                  : readOnly
+                    ? "Read-only — your role can't send messages"
+                    : inputsDisabled
+                      ? undefined
+                      : "Attach media"
               }
               className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -516,8 +599,9 @@ export function MessageComposer({
             size="sm"
             canAct={!readOnly}
             gateReason="send messages"
-            title={readOnly ? undefined : "Send template"}
-            className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-foreground"
+            disabled={channel === "sms"}
+            title={channel === "sms" ? "Templates are WhatsApp-only" : readOnly ? undefined : "Send template"}
+            className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-foreground disabled:opacity-40"
             onClick={onOpenTemplates}
           >
             <LayoutTemplate className="h-4 w-4" />
@@ -531,19 +615,18 @@ export function MessageComposer({
             placeholder={
               readOnly
                 ? "Read-only — viewers can browse but not reply"
-                : sessionExpired
+                : (sessionExpired && channel === "whatsapp")
                   ? "Session expired - use a template"
-                  : "Type a message... (Shift+Enter for new line)"
+                  : channel === "sms"
+                    ? "Type an SMS message..."
+                    : "Type a message... (Shift+Enter for new line)"
             }
-            disabled={sessionExpired || readOnly}
+            disabled={inputsDisabled}
             rows={1}
-            // Textarea keeps its own inline title — the GatedButton
-            // wrapping pattern doesn't apply to non-button inputs.
-            // The placeholder text also surfaces the read-only state.
             title={readOnly ? "Read-only — your role can't send messages" : undefined}
             className={cn(
               "flex-1 resize-none rounded-xl border border-border bg-muted px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary/50",
-              (sessionExpired || readOnly) && "cursor-not-allowed opacity-50"
+              inputsDisabled && "cursor-not-allowed opacity-50"
             )}
           />
 
@@ -551,7 +634,7 @@ export function MessageComposer({
             size="sm"
             canAct={!readOnly}
             gateReason="send messages"
-            disabled={!text.trim() || sessionExpired || sending}
+            disabled={!text.trim() || inputsDisabled || sending}
             onClick={handleSend}
             className="h-9 w-9 shrink-0 bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
           >
@@ -564,9 +647,20 @@ export function MessageComposer({
           `items-end` buttons below the textarea. Indented to line up
           under the textarea left edge. */}
       {!draft && !recording && (
-        <p className="mt-1 pl-[5.5rem] text-[10px] text-muted-foreground">
-          Type &apos;/&apos; for quick replies
-        </p>
+        <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+          <p className="pl-[5.5rem]">
+            Type &apos;/&apos; for quick replies
+          </p>
+          {channel === "sms" && (
+            <p className={cn("pr-2 font-mono flex items-center gap-1.5", smsStats.chars > smsStats.limit && "text-amber-500 font-semibold")}>
+              <span>{smsStats.chars} / {smsStats.limit}</span>
+              <span>({smsStats.segments} Part{smsStats.segments > 1 ? "s" : ""})</span>
+              <span className={cn("px-1 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider", smsStats.isUnicode ? "bg-amber-500/10 text-amber-400" : "bg-primary/10 text-primary")}>
+                {smsStats.isUnicode ? "Unicode" : "GSM"}
+              </span>
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
